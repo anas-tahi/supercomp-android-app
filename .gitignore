@@ -1,15 +1,22 @@
+# Android
 *.iml
-.gradle
+.gradle/
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+/.idea/
 .DS_Store
-/build
+/build/
 /captures
 .externalNativeBuild
-.cxx
-local.properties
+.cds/
+*.apk
+*.aab
+
+# Backend
+supercomp-backend/node_modules/
+supercomp-backend/.env
+supercomp-backend/.env.local
+
+# Keys & secrets
+*.jks
+*.keystore
+google-services.json
