@@ -1,11 +1,14 @@
 package com.anas.android_app.ui.screens.home
 
-import androidx.compose.foundation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -16,9 +19,17 @@ import com.anas.android_app.ui.components.BottomBar
 fun HomeScreen(
     navController: NavController,
     username: String,
-    onSendComment: (String) -> Unit
+    homeViewModel: HomeViewModel
 ) {
+    val products by homeViewModel.products.collectAsState()
+    val comments by homeViewModel.comments.collectAsState()
+
     var commentText by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        homeViewModel.loadAllProducts()
+        homeViewModel.loadComments()
+    }
 
     Scaffold(
         bottomBar = { BottomBar(navController) }
@@ -53,14 +64,45 @@ fun HomeScreen(
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
 
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // FILTER BUTTONS
+            Text("Filter by supermarket", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                FilterButton("Lidl") { homeViewModel.loadProductsBySupermarket("Lidl") }
+                FilterButton("Dia") { homeViewModel.loadProductsBySupermarket("Dia") }
+                FilterButton("Mercadona") { homeViewModel.loadProductsBySupermarket("Mercadona") }
+                FilterButton("Carrefour") { homeViewModel.loadProductsBySupermarket("Carrefour") }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // PRODUCTS LIST
+            Text("Products", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (products.isEmpty()) {
+                Text("No products found.", style = MaterialTheme.typography.bodyMedium)
+            } else {
+                products.forEach { product ->
+                    Text(
+                        text = "${product.name} - ${product.price}€ - ${product.supermarket}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Comment section
-            Text(
-                text = "Send us your feedback",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            // COMMENT SECTION
+            Text("Send us your feedback", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
                 value = commentText,
@@ -72,7 +114,7 @@ fun HomeScreen(
             Button(
                 onClick = {
                     if (commentText.isNotBlank()) {
-                        onSendComment(commentText)
+                        homeViewModel.sendComment(username, commentText)
                         commentText = ""
                     }
                 },
@@ -81,6 +123,24 @@ fun HomeScreen(
                     .align(Alignment.End)
             ) {
                 Text("Send")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // COMMENTS LIST
+            Text("Comments", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (comments.isEmpty()) {
+                Text("No comments yet.", style = MaterialTheme.typography.bodyMedium)
+            } else {
+                comments.forEach { comment ->
+                    Text(
+                        text = "${comment.username}: ${comment.message}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -113,5 +173,12 @@ fun SupermarketLogo(name: String) {
             text = name.take(1),
             style = MaterialTheme.typography.titleLarge
         )
+    }
+}
+
+@Composable
+fun FilterButton(label: String, onClick: () -> Unit) {
+    Button(onClick = onClick) {
+        Text(label)
     }
 }

@@ -3,6 +3,9 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
+import productRoutes from "./routes/products.js";
+import shoppingListRoutes from "./routes/shoppinglists.js";
+import wishlistRoutes from "./routes/wishlist.js";
 
 dotenv.config();
 
@@ -14,6 +17,9 @@ app.use(express.json());
 
 // Routes
 app.use("/auth", authRoutes);
+app.use("/products", productRoutes);
+app.use("/shoppinglists", shoppingListRoutes);
+app.use("/wishlist", wishlistRoutes);
 
 // MongoDB Connection
 mongoose
@@ -26,7 +32,7 @@ app.get("/", (req, res) => {
   res.json({ message: "SuperComp backend is running!" });
 });
 
-// Start Server — IMPORTANT FOR ANDROID
+// Start Server
 app.listen(process.env.PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${process.env.PORT}`);
 });

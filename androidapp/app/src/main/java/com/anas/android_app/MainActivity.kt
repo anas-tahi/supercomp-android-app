@@ -9,7 +9,7 @@ import androidx.compose.material3.Surface
 import androidx.navigation.compose.rememberNavController
 import com.anas.android_app.data.local.UserPrefs
 import com.anas.android_app.data.remote.ApiServiceInstance
-import com.anas.android_app.ui.home.HomeViewModel
+import com.anas.android_app.ui.screens.home.HomeViewModel
 import com.anas.android_app.ui.login.LoginViewModel
 import com.anas.android_app.ui.login.LoginViewModelFactory
 import com.anas.android_app.ui.navigation.AppNavGraph
