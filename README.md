@@ -113,49 +113,137 @@ Cada entidad tiene su propio repositorio. Ninguna pantalla ni composable llama d
 
 This deliverable focuses on defining and implementing the complete navigation structure of the app — screens, routes, transitions, argument passing, and a coherent user flow.
 
+### Navigation Technology
+
+| Library | `androidx.navigation.compose` |
+|---------|-------------------------------|
+| Container | `NavHost` — defines all destinations and routes |
+| Controller | `NavController` — manages the navigation back stack |
+| Main navigation | `BottomBar` — bottom bar with routes to main screens |
+| Data passing | `navArgument` — username and userId passed via route to each screen |
+
 ### Screens & Routes
 
-| Screen | Route | Arguments | Description |
-|--------|-------|-----------|-------------|
-| Login | `login` | — | Initial screen. User enters email and password. |
-| Register | `register` | — | New account creation. Returns to Login on success. |
-| Home | `home/{username}/{userId}` | username (String), userId (String) | Main screen after login. Browse products, filter by supermarket, post comments, toggle favourites. |
-| Compare | `compare/{username}/{userId}` | username (String), userId (String) | Search products by name and compare prices across supermarkets. |
-| Shopping List | `shoppinglist/{username}/{userId}` | username (String), userId (String) | Build a basket, compare total cost per supermarket, save and delete lists. |
-| Favourites | `favorites/{username}/{userId}` | username (String), userId (String) | View and remove wishlisted products. |
-| Profile | `profile/{username}/{userId}` | username (String), userId (String) | View account info, edit username, change password. |
+| Screen | Route | Type | Arguments |
+|--------|-------|------|-----------|
+| Splash Screen | `splash` | Entry screen | None |
+| Login Screen | `login` | startDestination | None |
+| Register Screen | `register` | Secondary auth screen | None |
+| Home Screen | `home/{username}/{userId}` | Main screen (hub) | username (String, req), userId (String, req) |
+| Compare Screen | `compare/{username}/{userId}` | BottomBar tab | username (String, req), userId (String, req) |
+| Favorites Screen | `favorites/{username}/{userId}` | BottomBar tab | username (String, req), userId (String, req) |
+| Shopping List Screen | `shoppinglist/{username}/{userId}` | BottomBar tab | username (String, req), userId (String, req) |
+| Profile Screen | `profile/{username}/{userId}` | BottomBar tab | username (String, req), userId (String, req) |
 
 ### Navigation Flow
 
 ```
-Login ──► Home ◄──────────────────────────┐
-  │        │  (Bottom Nav Bar)             │
-  ▼        ├──► Compare                    │
-Register   ├──► Shopping List              │
-           ├──► Favourites                 │
-           └──► Profile ──► (Logout) ──► Login
+APP LAUNCH
+    │
+    ▼
+Splash Screen (4s)
+    │
+    ├── Has saved JWT token? ──YES──► Home Screen
+    │
+    └── NO
+        │
+        ▼
+    Login Screen ──────────────────────────────────────────────┐
+        │                                                       │
+        ├── login OK ──► Home Screen (popUpTo login)            │
+        │                    │                                  │
+        └── no account       │  BottomBar                       │
+            │                ├──► Compare                       │
+            ▼                ├──► Favourites                    │
+        Register             ├──► Shopping List                 │
+            │                └──► Profile ──── logout ──────────┘
+            └── back/success
+                ▼
+            Login Screen
 ```
 
-- **Initial screen**: `login`
-- **After login**: navigates to `home/{username}/{userId}`, login is removed from the back stack
+- **Initial screen**: `splash` → checks saved session → routes to `login` or `home`
+- **Session persistence**: JWT token stored in DataStore — auto-login if token found
+- **After login**: navigates to `home/{username}/{userId}`, login removed from back stack with `popUpTo("login"){ inclusive = true }`
 - **Bottom nav bar**: available on all main screens; passes `username` and `userId` on every transition
-- **Back behaviour**: pressing back from any main screen exits the app; back from Register returns to Login
-- **Logout**: clears the DataStore session and navigates back to Login, clearing the entire back stack
+- **Logout**: clears DataStore → navigates to Login with `popUpTo(0){ inclusive = true }` — full stack cleared
 
-### Main Use Case — Compare prices and save a shopping list
+### Screen Details
 
-1. User opens the app → **Login** screen
-2. Enters credentials → navigates to **Home**
-3. Browses products, marks some as favourites
-4. Goes to **Shopping List** via the bottom bar
-5. Selects products → sees cheapest supermarket for the full basket
-6. Saves the list with a name → list persists in the backend
-7. Goes to **Compare** → searches a specific product → sees prices sorted cheapest first
-8. Goes to **Profile** → edits username → logs out → back to Login
+**Splash Screen** — `splash`
+Shows the SuperComp logo centred on a dark background with a loading indicator. Navigates automatically after 4 seconds. Checks for a saved JWT token in DataStore.
 
-### Argument passing
+**Login Screen** — `login`
+Fields: email · password · login button · link to Register. On success → `POST /auth/login` → token + username + userId saved in DataStore → navigate to Home.
 
-Every post-login screen receives `username` and `userId` as route arguments (type: `String`, required). These are used to scope API calls (shopping lists, wishlist, profile) to the logged-in user and are stored locally via **DataStore Preferences** (`UserPrefs`) for session persistence between app launches.
+**Register Screen** — `register`
+Fields: username · email · password · Register button · link to Login. On success → `POST /auth/register` → navigate to Login. Back → `popBackStack()` → Login.
+
+**Home Screen** — `home/{username}/{userId}`
+Shows: animated banner with username · stats indicators · supermarket filter chips (Mercadona / Lidl / Carrefour / Alcampo) · best deals with images · community comments feed · feedback input field.
+Actions: filter by supermarket · toggle favourite (`POST /wishlist`) · post comment (`POST /comments`) · navigate via BottomBar.
+Back: root screen — back button has no effect.
+
+**Compare Screen** — `compare/{username}/{userId}`
+Shows: search bar · product cards grouped by name · price per supermarket · "Best price" badge on cheapest · product image · heart button.
+Actions: search → `GET /products/search?name=…` · toggle favourite (`POST /wishlist`).
+
+**Favourites Screen** — `favorites/{username}/{userId}`
+Shows: saved products with image · name · supermarket badge · price in green · delete button. Empty state shown when no favourites.
+Actions: delete → `DELETE /wishlist/:id`.
+
+**Shopping List Screen** — `shoppinglist/{username}/{userId}`
+Two tabs — **Create & Compare** and **Saved Lists**.
+Create tab: search products · add to basket · remove items · compare total per supermarket sorted cheapest first · save list (`POST /shoppinglists`).
+Saved Lists tab: named lists with product thumbnails · delete list (`DELETE /shoppinglists/:id`).
+
+**Profile Screen** — `profile/{username}/{userId}`
+Shows: avatar circle with initial · username · SuperComp member label · Edit Profile button · info table (username / userId / version v3.0) · Logout button.
+Actions: Edit Profile → dialog to change username or password → `PUT /auth/profile/:userId`. Logout → clear DataStore → navigate to Login.
+
+### Argument Flow
+
+`username` and `userId` are captured at login and passed through all routes. No global state is used.
+
+| From | To | Arguments | Purpose |
+|------|----|-----------|---------|
+| Login | Home | username, userId | Identify the authenticated user |
+| Home | Compare | username, userId | Keep session active across BottomBar |
+| Home | Favourites | username, userId | Load this user's wishlist |
+| Home | Shopping List | username, userId | Save/load this user's lists |
+| Home | Profile | username, userId | Display and edit user data |
+| Profile | Login | (none) | Logout — stack fully cleared |
+
+### Back Button Behaviour
+
+| Screen | Behaviour | Implementation |
+|--------|-----------|----------------|
+| Splash | Auto-navigates after 4s, no back button | `LaunchedEffect + delay(4000)` |
+| Login | Back closes the app (it's the root) | `startDestination` — no popBackStack |
+| Register | Back → Login | `popBackStack()` |
+| After login | Login removed from stack | `popUpTo("login"){ inclusive = true }` |
+| Home | Root — back has no effect | Root of main NavHost graph |
+| Compare / Favourites / Shopping List / Profile | Back → previous screen | Default Android back gesture |
+| After logout | Full stack cleared → Login | `popUpTo(0){ inclusive = true }` |
+
+### Complete Use Case — Open app, compare prices, create a shopping list, save a favourite, logout
+
+| Step | Action |
+|------|--------|
+| 1 | App launch → Splash (4s) → no token → Login screen |
+| 2 | Enter email + password → `POST /auth/login` → token + userId saved in DataStore |
+| 3 | Navigate to `home/anas tahir/69d6c4cf` with `popUpTo("login"){ inclusive = true }` |
+| 4 | Home loads — banner shows "Hola, anas tahir" · best deals loaded with images |
+| 5 | Tap heart on a deal → `POST /wishlist { userId, productId }` |
+| 6 | BottomBar → Compare → `navigate("compare/anas tahir/69d6c4cf")` |
+| 7 | Search "leche" → `GET /products/search?name=leche` → prices shown per supermarket |
+| 8 | BottomBar → Shopping List → `navigate("shoppinglist/anas tahir/69d6c4cf")` |
+| 9 | Search "arroz" → tap + · Search "aceite" → tap + · basket shows both products |
+| 10 | Compare tab → totals for Mercadona / Lidl / Carrefour / Alcampo · cheapest highlighted in green |
+| 11 | Tap "Guardar lista" → dialog → name "Lista semanal" → `POST /shoppinglists` |
+| 12 | Saved Lists tab → "Lista semanal" appears with product thumbnails |
+| 13 | BottomBar → Profile → `navigate("profile/anas tahir/69d6c4cf")` |
+| 14 | Tap Logout → DataStore cleared → `navigate("login"){ popUpTo(0){ inclusive = true } }` |
 
 ---
 
@@ -163,48 +251,69 @@ Every post-login screen receives `username` and `userId` as route arguments (typ
 
 > Documentación completa: `docs/SuperComp_Entregable2.pdf`
 
-Este entregable se centra en definir e implementar la estructura de navegación completa de la app: pantallas, rutas, transiciones, paso de argumentos y un flujo de usuario coherente.
+### Tecnología de Navegación
 
-### Pantallas y rutas
+| Librería | `androidx.navigation.compose` |
+|----------|-------------------------------|
+| Contenedor | `NavHost` — define todos los destinos y rutas |
+| Controlador | `NavController` — gestiona el stack de navegación |
+| Navegación principal | `BottomBar` — barra inferior con rutas a las pantallas principales |
+| Paso de datos | `navArgument` — username y userId pasados por ruta a cada pantalla |
 
-| Pantalla | Ruta | Argumentos | Descripción |
-|----------|------|------------|-------------|
-| Login | `login` | — | Pantalla inicial. El usuario introduce email y contraseña. |
-| Registro | `register` | — | Creación de cuenta nueva. Vuelve al Login al completar. |
-| Home | `home/{username}/{userId}` | username (String), userId (String) | Pantalla principal tras el login. Ver productos, filtrar por supermercado, comentar, marcar favoritos. |
-| Comparar | `compare/{username}/{userId}` | username (String), userId (String) | Buscar productos por nombre y comparar precios entre supermercados. |
-| Lista de la compra | `shoppinglist/{username}/{userId}` | username (String), userId (String) | Crear cesta, comparar coste total por supermercado, guardar y borrar listas. |
-| Favoritos | `favorites/{username}/{userId}` | username (String), userId (String) | Ver y eliminar productos de la wishlist. |
-| Perfil | `profile/{username}/{userId}` | username (String), userId (String) | Ver datos de la cuenta, editar nombre de usuario, cambiar contraseña. |
+### Rutas de Navegación
 
-### Flujo de navegación
+| Pantalla | Ruta exacta (NavHost) | Tipo | Argumentos |
+|----------|-----------------------|------|------------|
+| Splash Screen | `splash` | Pantalla de entrada | Ninguno |
+| Login Screen | `login` | startDestination | Ninguno |
+| Register Screen | `register` | Pantalla secundaria de auth | Ninguno |
+| Home Screen | `home/{username}/{userId}` | Pantalla principal (hub) | username (String, req), userId (String, req) |
+| Compare Screen | `compare/{username}/{userId}` | Tab — BottomBar | username (String, req), userId (String, req) |
+| Favorites Screen | `favorites/{username}/{userId}` | Tab — BottomBar | username (String, req), userId (String, req) |
+| Shopping List Screen | `shoppinglist/{username}/{userId}` | Tab — BottomBar | username (String, req), userId (String, req) |
+| Profile Screen | `profile/{username}/{userId}` | Tab — BottomBar | username (String, req), userId (String, req) |
+
+### Flujo de Navegación
 
 ```
-Login ──► Home ◄──────────────────────────┐
-  │        │  (Barra de navegación)        │
-  ▼        ├──► Comparar                   │
-Registro   ├──► Lista de la compra         │
-           ├──► Favoritos                  │
-           └──► Perfil ──► (Logout) ──► Login
+INICIO DE LA APP
+    │
+    ▼
+Splash Screen (4s)
+    │
+    ├── ¿Hay token JWT guardado? ──SÍ──► Home Screen
+    │
+    └── NO
+        │
+        ▼
+    Login Screen ──────────────────────────────────────────────┐
+        │                                                       │
+        ├── login OK ──► Home Screen (popUpTo login)            │
+        │                    │                                  │
+        └── sin cuenta       │  BottomBar                       │
+            │                ├──► Comparar                      │
+            ▼                ├──► Favoritos                     │
+        Registro             ├──► Lista de la compra            │
+            │                └──► Perfil ──── logout ───────────┘
+            └── back/éxito
+                ▼
+            Login Screen
 ```
 
-- **Pantalla inicial**: `login`
-- **Tras el login**: navega a `home/{username}/{userId}`, el login se elimina del back stack
+- **Pantalla inicial**: `splash` → comprueba sesión guardada → redirige a `login` o `home`
+- **Sesión persistente**: token JWT guardado en DataStore — auto-login si se encuentra token
+- **Tras el login**: navega a `home/{username}/{userId}`, login eliminado del stack con `popUpTo("login"){ inclusive = true }`
 - **Barra de navegación inferior**: disponible en todas las pantallas principales; pasa `username` y `userId` en cada transición
-- **Comportamiento al volver**: desde cualquier pantalla principal, el botón atrás cierra la app; desde Registro vuelve al Login
-- **Logout**: limpia la sesión en DataStore y navega al Login vaciando el back stack
+- **Logout**: limpia DataStore → navega al Login con `popUpTo(0){ inclusive = true }` — stack completamente limpiado
 
-### Caso de uso principal — Comparar precios y guardar lista de la compra
+### Comportamiento del Botón Atrás
 
-1. El usuario abre la app → pantalla de **Login**
-2. Introduce sus credenciales → navega a **Home**
-3. Explora productos, marca algunos como favoritos
-4. Va a **Lista de la compra** desde la barra inferior
-5. Selecciona productos → ve el supermercado más barato para toda la cesta
-6. Guarda la lista con un nombre → persiste en el backend
-7. Va a **Comparar** → busca un producto concreto → ve precios ordenados de menor a mayor
-8. Va a **Perfil** → edita su nombre de usuario → hace logout → vuelve al Login
-
-### Paso de argumentos
-
-Todas las pantallas posteriores al login reciben `username` y `userId` como argumentos de ruta (tipo: `String`, obligatorios). Se usan para asociar las llamadas a la API (listas, wishlist, perfil) al usuario autenticado, y se almacenan localmente con **DataStore Preferences** (`UserPrefs`) para mantener la sesión entre aperturas de la app.
+| Pantalla | Comportamiento | Implementación |
+|----------|---------------|----------------|
+| Splash | Navega automáticamente tras 4s, sin botón atrás | `LaunchedEffect + delay(4000)` |
+| Login | Atrás cierra la app (es la raíz) | `startDestination` — no popBackStack |
+| Register | Atrás → Login | `popBackStack()` |
+| Tras el login | Login eliminado del stack | `popUpTo("login"){ inclusive = true }` |
+| Home | Raíz — el botón atrás no tiene efecto | Raíz del grafo principal NavHost |
+| Compare / Favoritos / Lista / Perfil | Atrás → pantalla anterior | Gesto atrás por defecto de Android |
+| Tras cerrar sesión | Stack completo limpiado → Login | `popUpTo(0){ inclusive = true }` |
