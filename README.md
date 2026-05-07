@@ -19,10 +19,91 @@ supercomp-android-app/
 
 ---
 
-## Entregable 1
+## Entregable 1 — Data Layer & Collections
 
-Data layer documentation and initial implementation.
-See `docs/entregable1_documentacion.md`
+> Full documentation: `docs/entregable1_documentacion.md`
+
+This deliverable defines the data layer of the app: MongoDB collections, their fields, relationships, Kotlin data classes, and the repository pattern.
+
+### Collections
+
+| Collection | Description |
+|------------|-------------|
+| `users` | Registered users (username, email, hashed password) |
+| `products` | Products with price per supermarket — same product name appears multiple times, one per supermarket, enabling price comparison |
+| `comments` | Community feedback posted from the app |
+| `shoppinglists` | Named shopping lists saved per user, containing product references |
+| `wishlists` | Products a user has marked as favourite |
+
+### Relationships
+
+```
+users (1) ──────< shoppinglists (N)   [shoppinglists.user → users._id]
+users (1) ──────< wishlists (N)       [wishlists.userId → users._id]
+products (1) ───< wishlists (N)       [wishlists.productId → products._id]
+products (same name, N supermarkets)  → price comparison logic
+```
+
+### Repositories
+
+Each entity has its own repository. No screen or composable calls the API directly.
+
+| Repository | Operations |
+|------------|------------|
+| `ProductRepository` | `getAllProducts()`, `getProductsBySupermarket()`, `searchProducts()` |
+| `CommentRepository` | `getAllComments()`, `postComment()` |
+| `ShoppingListRepository` | `getListsByUser()`, `createList()`, `deleteList()` |
+| `WishlistRepository` | `getWishlistByUser()`, `addToWishlist()`, `removeFromWishlist()` |
+
+### Demo use case
+
+1. **WRITE** — user posts a comment → `CommentRepository.postComment()` → `POST /comments` → saved in MongoDB
+2. **READ** — user loads products → `ProductRepository.getAllProducts()` → `GET /products` → full list displayed
+3. **FILTER** — user selects Mercadona → `ProductRepository.getProductsBySupermarket("Mercadona")` → filtered results shown
+
+---
+
+## Entregable 1 — Capa de Datos y Colecciones _(Español)_
+
+> Documentación completa: `docs/entregable1_documentacion.md`
+
+Este entregable define la capa de datos de la app: colecciones MongoDB, sus campos, relaciones, data classes en Kotlin y el patrón repositorio.
+
+### Colecciones
+
+| Colección | Descripción |
+|-----------|-------------|
+| `users` | Usuarios registrados (username, email, contraseña hasheada) |
+| `products` | Productos con precio por supermercado — el mismo nombre de producto aparece varias veces, una por supermercado, permitiendo la comparación de precios |
+| `comments` | Comentarios de la comunidad enviados desde la app |
+| `shoppinglists` | Listas de la compra guardadas por usuario, con referencias a productos |
+| `wishlists` | Productos marcados como favoritos por el usuario |
+
+### Relaciones
+
+```
+users (1) ──────< shoppinglists (N)   [shoppinglists.user → users._id]
+users (1) ──────< wishlists (N)       [wishlists.userId → users._id]
+products (1) ───< wishlists (N)       [wishlists.productId → products._id]
+products (mismo nombre, N supermercados) → lógica de comparación de precios
+```
+
+### Repositorios
+
+Cada entidad tiene su propio repositorio. Ninguna pantalla ni composable llama directamente a la API.
+
+| Repositorio | Operaciones |
+|-------------|-------------|
+| `ProductRepository` | `getAllProducts()`, `getProductsBySupermarket()`, `searchProducts()` |
+| `CommentRepository` | `getAllComments()`, `postComment()` |
+| `ShoppingListRepository` | `getListsByUser()`, `createList()`, `deleteList()` |
+| `WishlistRepository` | `getWishlistByUser()`, `addToWishlist()`, `removeFromWishlist()` |
+
+### Caso de uso demostrado
+
+1. **WRITE** — el usuario escribe un comentario → `CommentRepository.postComment()` → `POST /comments` → guardado en MongoDB
+2. **READ** — el usuario carga productos → `ProductRepository.getAllProducts()` → `GET /products` → lista mostrada en pantalla
+3. **FILTER** — el usuario selecciona Mercadona → `ProductRepository.getProductsBySupermarket("Mercadona")` → resultados filtrados
 
 ---
 
