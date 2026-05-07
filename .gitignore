@@ -1,0 +1,18 @@
+# Android build
+androidapp/build/
+androidapp/.gradle/
+androidapp/app/build/
+androidapp/local.properties
+androidapp/.idea/caches/
+androidapp/.idea/libraries/
+androidapp/.idea/modules.xml
+androidapp/.idea/workspace.xml
+*.apk
+*.aab
+
+# Node.js
+supercomp-backend/node_modules/
+
+# Credentials
+*.env
+.env
