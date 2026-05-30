@@ -24,7 +24,15 @@ class LoginViewModel : ViewModel() {
                     val body = response.body()!!
                     // Store token in RetrofitClient for subsequent authenticated requests
                     RetrofitClient.authToken = body.token
-                    UserPrefs(context).saveSession(body.token, body.username, body.userId, body.email)
+                    UserPrefs(context).saveSession(
+                        token = body.token,
+                        username = body.username,
+                        userId = body.userId,
+                        email = body.email,
+                        profilePicture = body.profilePicture,
+                        phone = body.phone,
+                        city = body.city
+                    )
                     onSuccess(body.username, body.userId)
                 } else {
                     onError("Login fallido. Comprueba tus credenciales.")

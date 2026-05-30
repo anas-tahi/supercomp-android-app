@@ -1,5 +1,7 @@
 package com.supercomp.android.ui.screens.home
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -8,6 +10,7 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
@@ -15,6 +18,7 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -22,15 +26,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import com.supercomp.android.R
 import com.supercomp.android.data.model.Product
 import com.supercomp.android.ui.components.BottomBar
+import com.supercomp.android.ui.components.ProductImage
 import com.supercomp.android.ui.components.supermarketLogoRes
 import com.supercomp.android.ui.theme.*
 import kotlinx.coroutines.delay
-
-// ── Supermarket info ──────────────────────────────────────────────────────────
 
 data class SupermarketInfo(val name: String, val color: Color, val initial: String)
 
@@ -49,8 +50,6 @@ fun supermarketColor(name: String): Color = when (name) {
     else        -> Color.Gray
 }
 
-// ── Screen ────────────────────────────────────────────────────────────────────
-
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -62,103 +61,90 @@ fun HomeScreen(
     val isLoading    by viewModel.isLoading.collectAsState()
     val favouriteIds by viewModel.favouriteIds.collectAsState()
     val snackMessage by viewModel.snackMessage.collectAsState()
-
     val snackbarHostState = remember { SnackbarHostState() }
     var commentText by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
-    val bestDeals = remember(products) {
-        products
-            .groupBy { it.name }
-            .mapNotNull { (_, list) -> list.minByOrNull { it.price } }
-            .sortedBy { it.price }
-            .take(8)
+    val randomProducts = remember(products) {
+        if (products.isEmpty()) emptyList() else products.shuffled().take(6)
     }
 
     LaunchedEffect(Unit) {
         viewModel.loadAllProducts()
         viewModel.loadFavouriteIds(userId)
     }
-
     LaunchedEffect(snackMessage) {
         snackMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearSnack() }
     }
 
     Scaffold(
-        bottomBar    = { BottomBar(navController, username, userId) },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar      = { BottomBar(navController, username, userId) },
+        snackbarHost   = { SnackbarHost(snackbarHostState) },
         containerColor = SuperNavy
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.padding(padding).fillMaxSize(),
+            modifier            = Modifier.padding(padding).fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-
-            // ── Hero ────────────────────────────────────────────────────────
             item { HeroBanner(username) }
-
-            // ── App info strip ──────────────────────────────────────────────
             item { AppInfoStrip() }
+            item { AnimatedSupermarketChipsRow() }
 
-            // ── Supermarket chips ───────────────────────────────────────────
-            item { SupermarketChipsRow() }
-
-            // ── Best Deals header ───────────────────────────────────────────
             item {
                 Row(
-                    modifier = Modifier
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 24.dp, bottom = 12.dp),
+                    modifier          = Modifier.padding(horizontal = 20.dp).padding(top = 24.dp, bottom = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(4.dp, 20.dp)
-                            .background(SuperGreen, RoundedCornerShape(2.dp))
-                    )
+                    Box(Modifier.size(4.dp, 20.dp).background(SuperGreen, RoundedCornerShape(2.dp)))
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        "Best Deals Today",
+                        "Featured Products",
                         fontWeight = FontWeight.Bold,
                         fontSize   = 20.sp,
                         color      = SuperTextPrimary
                     )
                     Spacer(Modifier.weight(1f))
-                    if (isLoading)
-                        CircularProgressIndicator(
-                            modifier    = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
-                            color       = SuperGreen
-                        )
+                    if (isLoading) CircularProgressIndicator(
+                        modifier    = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color       = SuperGreen
+                    )
                 }
             }
 
-            // ── Best Deals list ─────────────────────────────────────────────
-            if (bestDeals.isEmpty() && !isLoading) {
+            if (randomProducts.isEmpty() && !isLoading) {
                 item {
                     Box(Modifier.fillMaxWidth().padding(40.dp), Alignment.Center) {
                         Text("No products yet", color = SuperTextSecond)
                     }
                 }
             } else {
-                items(bestDeals) { product ->
-                    AnimatedDealCard(
-                        product     = product,
-                        isFavourite = favouriteIds.contains(product.id),
-                        onFavClick  = { viewModel.toggleFavourite(userId, product, favouriteIds) },
-                        allPrices   = products.filter { it.name == product.name }
-                    )
+                items(randomProducts.chunked(2)) { rowItems ->
+                    Row(
+                        modifier              = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowItems.forEach { product ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                ProductGridCard(
+                                    product     = product,
+                                    isFavourite = favouriteIds.contains(product.id),
+                                    onFavClick  = { viewModel.toggleFavourite(userId, product, favouriteIds) }
+                                )
+                            }
+                        }
+                        if (rowItems.size == 1) Spacer(modifier = Modifier.weight(1f))
+                    }
                 }
             }
 
-            // ── Feedback box (sends silently, no comments displayed) ────────
             item {
                 Spacer(Modifier.height(16.dp))
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(4.dp, 20.dp).background(SuperGreen, RoundedCornerShape(2.dp)))
                         Spacer(Modifier.width(10.dp))
-                        Text("Feedback", fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp, color = SuperTextPrimary)
+                        Text("Feedback", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = SuperTextPrimary)
                     }
                     Spacer(Modifier.height(10.dp))
                     OutlinedTextField(
@@ -188,52 +174,74 @@ fun HomeScreen(
                         shape    = RoundedCornerShape(12.dp),
                         colors   = ButtonDefaults.buttonColors(containerColor = SuperGreen)
                     ) {
-                        Icon(Icons.Filled.Send, contentDescription = null,
-                            tint = Color.Black, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Filled.Send, null, tint = Color.Black, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Enviar", color = Color.Black, fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
-            item { Spacer(Modifier.height(24.dp)) }
+            // Website promotion
+            item {
+                Spacer(Modifier.height(24.dp))
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = SuperSurface2),
+                    border = BorderStroke(1.5.dp, Brush.linearGradient(listOf(SuperGreen, Color.Cyan)))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "Beyond the App 🌐",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = SuperTextPrimary
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Discover the full SuperComp experience on our official website. More tools, more comparisons, and the same passion for savings.",
+                            fontSize = 13.sp,
+                            color = SuperTextSecond,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 18.sp
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://frontend-12gl.onrender.com"))
+                                context.startActivity(intent)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = SuperGreen),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Language, null, tint = Color.Black)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Visit our Website", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            item { Spacer(Modifier.height(32.dp)) }
         }
     }
 }
 
-// ── Section Header ────────────────────────────────────────────────────────────
-
-@Composable
-fun SectionHeader(title: String) {
-    Row(
-        modifier = Modifier.padding(horizontal = 20.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            Modifier
-                .size(4.dp, 20.dp)
-                .background(SuperGreen, RoundedCornerShape(2.dp))
-        )
-        Spacer(Modifier.width(10.dp))
-        Text(title, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = SuperTextPrimary)
-    }
-}
-
-// ── Hero Banner ───────────────────────────────────────────────────────────────
-
+// Hero Banner
 @Composable
 fun HeroBanner(username: String) {
     val infiniteTransition = rememberInfiniteTransition(label = "hero")
     val animatedOffset by infiniteTransition.animateFloat(
         initialValue  = 0f,
         targetValue   = 1f,
-        animationSpec = infiniteRepeatable(
-            animation  = tween(4000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "offset"
+        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Reverse),
+        label         = "offset"
     )
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -248,19 +256,20 @@ fun HeroBanner(username: String) {
     ) {
         Box(Modifier.size(180.dp).offset((-40).dp, (-40).dp).alpha(0.08f).background(SuperGreen, CircleShape))
         Box(Modifier.size(120.dp).align(Alignment.BottomEnd).offset(30.dp, 30.dp).alpha(0.06f).background(SuperGreen, CircleShape))
-
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier            = Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            Text("SuperComp 🛒", color = SuperGreen, fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp)
+            Text("SuperComp 🛒", color = SuperGreen, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp)
             Spacer(Modifier.height(6.dp))
-            Text("Hola, $username", color = SuperTextPrimary,
-                fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Hola, $username", color = SuperTextPrimary, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
             Spacer(Modifier.height(6.dp))
-            Text("Find the best grocery prices\nacross Spain's top supermarkets",
-                color = SuperTextSecond, fontSize = 14.sp, lineHeight = 20.sp)
+            Text(
+                "Find the best grocery prices\nacross Spain's top supermarkets",
+                color      = SuperTextSecond,
+                fontSize   = 14.sp,
+                lineHeight = 20.sp
+            )
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatPill("4", "Supermarkets")
@@ -279,7 +288,7 @@ fun StatPill(value: String, label: String) {
         border = BorderStroke(1.dp, SuperGreen.copy(alpha = 0.3f))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            modifier          = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(value, color = SuperGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -289,15 +298,10 @@ fun StatPill(value: String, label: String) {
     }
 }
 
-// ── App Info Strip ────────────────────────────────────────────────────────────
-
 @Composable
 fun AppInfoStrip() {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(SuperSurface)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+        modifier          = Modifier.fillMaxWidth().background(SuperSurface).padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         InfoItem("🔍", "Compare prices")
@@ -312,32 +316,62 @@ fun AppInfoStrip() {
 fun RowScope.InfoItem(emoji: String, text: String) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.weight(1f)
+        modifier            = Modifier.weight(1f)
     ) {
         Text(emoji, fontSize = 18.sp)
         Spacer(Modifier.height(2.dp))
-        Text(text, fontSize = 9.sp, color = SuperTextSecond,
-            textAlign = TextAlign.Center, lineHeight = 12.sp)
+        Text(text, fontSize = 9.sp, color = SuperTextSecond, textAlign = TextAlign.Center, lineHeight = 12.sp)
     }
 }
 
-// ── Supermarket Chips ─────────────────────────────────────────────────────────
-
 @Composable
-fun SupermarketChipsRow() {
+fun AnimatedSupermarketChipsRow() {
     Column(modifier = Modifier.padding(top = 20.dp)) {
-        Text("Supermarkets", fontWeight = FontWeight.Bold,
-            fontSize = 20.sp, color = SuperTextPrimary,
-            modifier = Modifier.padding(horizontal = 20.dp))
+        Text(
+            "Supermarkets",
+            fontWeight = FontWeight.Bold,
+            fontSize   = 20.sp,
+            color      = SuperTextPrimary,
+            modifier   = Modifier.padding(horizontal = 20.dp)
+        )
         Spacer(Modifier.height(12.dp))
+
+        val infiniteTransition = rememberInfiniteTransition(label = "chips_scroll")
+        val scrollOffset by infiniteTransition.animateFloat(
+            initialValue  = 0f,
+            targetValue   = 400f,
+            animationSpec = infiniteRepeatable(
+                animation  = tween(3000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "scroll_offset"
+        )
+
+        val listState = rememberLazyListState()
+
+        LaunchedEffect(scrollOffset) {
+            try { listState.scrollToItem(0, scrollOffset.toInt().coerceAtLeast(0)) }
+            catch (_: Exception) {}
+        }
+
         LazyRow(
-            contentPadding = PaddingValues(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            state                 = listState,
+            contentPadding        = PaddingValues(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            userScrollEnabled     = true
         ) {
-            items(supermarketList) { s ->
+            items(supermarketList + supermarketList) { s ->
                 var visible by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) { delay(supermarketList.indexOf(s) * 80L); visible = true }
-                AnimatedVisibility(visible = visible, enter = fadeIn() + slideInHorizontally()) {
+                LaunchedEffect(Unit) {
+                    delay(supermarketList.indexOf(
+                        supermarketList.find { m -> m.name == s.name } ?: supermarketList[0]
+                    ) * 100L)
+                    visible = true
+                }
+                AnimatedVisibility(
+                    visible = visible,
+                    enter   = fadeIn(tween(400)) + scaleIn(tween(400))
+                ) {
                     SupermarketChip(s)
                 }
             }
@@ -348,177 +382,129 @@ fun SupermarketChipsRow() {
 @Composable
 fun SupermarketChip(info: SupermarketInfo) {
     val logoRes = supermarketLogoRes(info.name)
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse_${info.name}")
+    val scale by infiniteTransition.animateFloat(
+        initialValue  = 1f,
+        targetValue   = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale_${info.name}"
+    )
+
     Surface(
-        shape  = RoundedCornerShape(16.dp),
-        color  = Color.Transparent,
-        border = BorderStroke(1.5.dp, info.color.copy(alpha = 0.5f)),
-        modifier = Modifier.width(108.dp)
+        shape    = RoundedCornerShape(16.dp),
+        color    = Color.Transparent,
+        border   = BorderStroke(1.5.dp, info.color.copy(alpha = 0.5f)),
+        modifier = Modifier.width(108.dp).scale(scale)
     ) {
         Column(
             modifier            = Modifier.padding(vertical = 14.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // All logos are 300×300 squares — Crop fills box perfectly
             Box(
-                modifier = Modifier
-                    .size(70.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color.White),
+                modifier         = Modifier.size(70.dp).clip(RoundedCornerShape(14.dp)).background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
                 if (logoRes != null) {
                     Image(
-                        painter            = painterResource(id = logoRes),
-                        contentDescription = info.name,
-                        contentScale       = ContentScale.Crop,
-                        modifier           = Modifier.fillMaxSize()
+                        painterResource(id = logoRes),
+                        info.name,
+                        contentScale = ContentScale.Crop,
+                        modifier     = Modifier.fillMaxSize()
                     )
                 } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(info.color),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(info.initial, color = Color.White,
-                            fontWeight = FontWeight.ExtraBold, fontSize = 22.sp)
+                    Box(Modifier.fillMaxSize().background(info.color), contentAlignment = Alignment.Center) {
+                        Text(info.initial, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp)
                     }
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Text(info.name, fontSize = 11.sp, color = SuperTextPrimary,
-                fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+            Text(
+                info.name,
+                fontSize   = 11.sp,
+                color      = SuperTextPrimary,
+                fontWeight = FontWeight.SemiBold,
+                textAlign  = TextAlign.Center
+            )
         }
     }
 }
 
-// ── Deal Card ─────────────────────────────────────────────────────────────────
-
+// Product Grid Card
 @Composable
-fun AnimatedDealCard(
-    product: Product,
-    isFavourite: Boolean,
-    onFavClick: () -> Unit,
-    allPrices: List<Product>
-) {
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(100); visible = true }
-
-    AnimatedVisibility(
-        visible = visible,
-        enter   = fadeIn(tween(400)) + slideInVertically(tween(400)) { it / 2 }
+fun ProductGridCard(product: Product, isFavourite: Boolean, onFavClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        shape    = RoundedCornerShape(16.dp),
+        colors   = CardDefaults.cardColors(containerColor = SuperSurface2),
+        border   = BorderStroke(1.dp, SuperBorder)
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 5.dp),
-            shape  = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = SuperSurface2),
-            border = BorderStroke(1.dp, SuperBorder)
-        ) {
-            Row(
-                modifier          = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Product photo with supermarket logo badge
-                com.supercomp.android.ui.components.ProductImage(
-                    imageUrl    = product.imageUrl,
-                    supermarket = product.supermarket,
-                    size        = 64.dp,
-                    cornerRadius = 12.dp,
-                    badgeSize   = 22.dp
+        Column {
+            //  `Modifier` use size = 140.dp
+            Box(modifier = Modifier.fillMaxWidth().height(120.dp)) {
+                ProductImage(
+                    imageUrl     = product.imageUrl,
+                    supermarket  = product.supermarket,
+                    size         = 140.dp,
+                    cornerRadius = 0.dp,
+                    badgeSize    = 24.dp
                 )
-
-                Spacer(Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(product.name, fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp, color = SuperTextPrimary,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Spacer(Modifier.height(4.dp))
-
-                    Row(
-                        verticalAlignment      = Alignment.CenterVertically,
-                        horizontalArrangement  = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = supermarketColor(product.supermarket).copy(alpha = 0.2f)
-                        ) {
-                            Text(product.supermarket,
-                                modifier  = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                fontSize  = 11.sp,
-                                color     = supermarketColor(product.supermarket),
-                                fontWeight = FontWeight.SemiBold)
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = SuperGreen.copy(alpha = 0.15f)
-                        ) {
-                            Text("Best Price",
-                                modifier  = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                fontSize  = 10.sp, color = SuperGreen,
-                                fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    if (allPrices.size > 1) {
-                        Spacer(Modifier.height(6.dp))
-                        val savings = allPrices.maxOf { it.price } - allPrices.minOf { it.price }
-                        if (savings > 0.01) {
-                            Text("Save €${"%.2f".format(savings)} vs most expensive",
-                                fontSize = 10.sp, color = SuperGreen.copy(alpha = 0.8f))
-                        }
-                    }
-                }
-
-                Spacer(Modifier.width(8.dp))
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("€${"%.2f".format(product.price)}",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize   = 22.sp, color = SuperGreen)
-                    IconButton(onClick = onFavClick, modifier = Modifier.size(32.dp)) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.4f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(onClick = onFavClick, modifier = Modifier.size(28.dp)) {
                         Icon(
-                            imageVector        = if (isFavourite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            imageVector        = if (isFavourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                             contentDescription = null,
-                            tint     = if (isFavourite) SuperRed else SuperTextSecond,
-                            modifier = Modifier.size(20.dp)
+                            tint               = if (isFavourite) SuperRed else Color.White,
+                            modifier           = Modifier.size(16.dp)
                         )
                     }
                 }
             }
-        }
-    }
-}
 
-// ── Comment Card ──────────────────────────────────────────────────────────────
-
-@Composable
-fun CommentCard(username: String, message: String) {
-    Card(
-        modifier = Modifier
-            .padding(horizontal = 20.dp, vertical = 4.dp)
-            .fillMaxWidth(),
-        shape  = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = SuperSurface),
-        border = BorderStroke(1.dp, SuperBorder)
-    ) {
-        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(SuperGreen, LidlBlue))),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(username.take(1).uppercase(), color = Color.White,
-                    fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column {
-                Text(username, fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp, color = SuperTextPrimary)
-                Spacer(Modifier.height(3.dp))
-                Text(message, fontSize = 13.sp, color = SuperTextSecond, lineHeight = 18.sp)
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(
+                    product.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize   = 13.sp,
+                    color      = SuperTextPrimary,
+                    maxLines   = 2,
+                    overflow   = TextOverflow.Ellipsis,
+                    modifier   = Modifier.heightIn(min = 36.dp)
+                )
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.Bottom
+                ) {
+                    Text(
+                        "€${"%.2f".format(product.price)}",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize   = 18.sp,
+                        color      = SuperGreen
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = supermarketColor(product.supermarket).copy(alpha = 0.2f)
+                    ) {
+                        Text(
+                            product.supermarket.take(1),
+                            modifier   = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            fontSize   = 10.sp,
+                            color      = supermarketColor(product.supermarket),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }

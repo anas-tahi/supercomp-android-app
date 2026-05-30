@@ -41,7 +41,7 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // ── Logo ─────────────────────────────────────────────────────────────
+        // Logo
         Image(
             painter            = painterResource(id = R.drawable.ic_supercomp_logo),
             contentDescription = "SuperComp",
@@ -67,7 +67,7 @@ fun LoginScreen(
 
         Spacer(Modifier.height(36.dp))
 
-        // ── Form card ────────────────────────────────────────────────────────
+        // Form card
         Surface(
             shape  = RoundedCornerShape(20.dp),
             color  = SuperSurface,

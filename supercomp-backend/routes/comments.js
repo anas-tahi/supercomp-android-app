@@ -3,7 +3,7 @@ import Comment from "../models/Comment.js";
 
 const router = express.Router();
 
-// READ – all comments (newest first)
+// READ all comments
 router.get("/", async (req, res) => {
   try {
     const comments = await Comment.find().sort({ createdAt: -1 });
@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// WRITE – post a new comment
+// WRITE a new comment
 router.post("/", async (req, res) => {
   try {
     const { username, message } = req.body;

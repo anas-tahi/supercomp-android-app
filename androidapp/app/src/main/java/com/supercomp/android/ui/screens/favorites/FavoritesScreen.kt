@@ -6,12 +6,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -20,21 +20,20 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.supercomp.android.data.model.Product
+import com.supercomp.android.data.model.Wishlist
 import com.supercomp.android.data.remote.RetrofitClient
 import com.supercomp.android.ui.components.BottomBar
 import com.supercomp.android.ui.components.ProductImage
-import com.supercomp.android.ui.components.SupermarketLogo
-import com.supercomp.android.ui.screens.home.supermarketColor
 import com.supercomp.android.ui.theme.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-// ── ViewModel ─────────────────────────────────────────────────────────────────
+// ViewModel
 
 class FavoritesViewModel : ViewModel() {
 
-    private val _items     = MutableStateFlow<List<Pair<String, Product>>>(emptyList())
+    private val _items = MutableStateFlow<List<Pair<String, Product>>>(emptyList())
     val items: StateFlow<List<Pair<String, Product>>> = _items
 
     private val _isLoading = MutableStateFlow(false)
@@ -44,24 +43,18 @@ class FavoritesViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val wishlistResponse = RetrofitClient.api.getWishlistByUser(userId)
-                if (!wishlistResponse.isSuccessful) return@launch
+                // Fetch both wishlist and full product catalog in same time
+                val wishlistResponse  = RetrofitClient.api.getWishlistByUser(userId)
+                val productsResponse  = RetrofitClient.api.getAllProducts()
 
                 val wishlistItems = wishlistResponse.body() ?: emptyList()
+                val catalog       = productsResponse.body() ?: emptyList()
 
-                val productsResponse = RetrofitClient.api.getAllProducts()
-                val allProducts = if (productsResponse.isSuccessful)
-                    productsResponse.body() ?: emptyList()
-                else emptyList()
-
-                val paired = wishlistItems.mapNotNull { entry ->
-                    val productId = extractId(entry.productId)
-                    if (productId.isBlank()) return@mapNotNull null
-                    val product = allProducts.find { it.id == productId }
-                        ?: return@mapNotNull null
-                    Pair(entry.id, product)
+                // Matches what the user chose with what you have in our data
+                _items.value = wishlistItems.mapNotNull { wishlist ->
+                    val product = wishlist.resolveProduct(catalog)
+                    if (product != null) Pair(wishlist.id, product) else null
                 }
-                _items.value = paired
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -75,21 +68,10 @@ class FavoritesViewModel : ViewModel() {
             try {
                 RetrofitClient.api.removeFromWishlist(wishlistId)
                 load(userId)
-            } catch (e: Exception) { e.printStackTrace() }
-        }
-    }
-
-    private fun extractId(productId: Any): String {
-        return try {
-            when (productId) {
-                is String    -> productId
-                is Map<*, *> -> productId["\$oid"]?.toString()
-                    ?: productId["_id"]?.toString()
-                    ?: productId["id"]?.toString()
-                    ?: ""
-                else -> productId.toString()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) { "" }
+        }
     }
 }
 
@@ -112,39 +94,37 @@ fun FavoritesScreen(
         containerColor = SuperNavy
     ) { padding ->
         Column(
-            modifier = Modifier
+            Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            Text("Favourites ❤️", fontSize = 22.sp, fontWeight = FontWeight.Bold,
-                color = SuperTextPrimary)
-            Text("Your saved products", style = MaterialTheme.typography.bodyMedium,
-                color = SuperTextSecond)
-            Spacer(Modifier.height(4.dp))
-            Text("Tap ❤️ on any product to add it here.",
-                style = MaterialTheme.typography.bodySmall, color = SuperTextSecond)
+            Text("Favourites ❤️", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = SuperTextPrimary)
+            Text("Your saved products", color = SuperTextSecond)
+            Text("Tap 🗺 to find the nearest store", color = SuperTextSecond, fontSize = 11.sp)
+
             Spacer(Modifier.height(16.dp))
 
-            when {
-                isLoading -> Box(Modifier.fillMaxWidth(), Alignment.Center) {
+            if (isLoading) {
+                Box(Modifier.fillMaxWidth(), Alignment.Center) {
                     CircularProgressIndicator(color = SuperGreen)
                 }
-                items.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            } else if (items.isEmpty()) {
+                Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("❤️", fontSize = 48.sp)
-                        Spacer(Modifier.height(8.dp))
-                        Text("No favourites yet.", fontWeight = FontWeight.SemiBold,
-                            color = SuperTextPrimary)
-                        Text("Tap the heart on any product to save it.",
-                            color = SuperTextSecond)
+                        Spacer(Modifier.height(12.dp))
+                        Text("No favourites yet.", color = SuperTextSecond, fontSize = 16.sp)
+                        Text("Tap ❤ on any product to save it.", color = SuperTextSecond, fontSize = 13.sp)
                     }
                 }
-                else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(items) { (wishlistId, product) ->
                         FavouriteProductCard(
                             product  = product,
-                            onRemove = { viewModel.remove(wishlistId, userId) }
+                            onRemove = { viewModel.remove(wishlistId, userId) },
+                            onMap    = { navController.navigate("map/${product.supermarket}") }
                         )
                     }
                 }
@@ -153,67 +133,42 @@ fun FavoritesScreen(
     }
 }
 
-// ── Card with image ───────────────────────────────────────────────────────────
-
 @Composable
-fun FavouriteProductCard(product: Product, onRemove: () -> Unit) {
+fun FavouriteProductCard(
+    product:  Product,
+    onRemove: () -> Unit,
+    onMap:    () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape    = RoundedCornerShape(14.dp),
         colors   = CardDefaults.cardColors(containerColor = SuperSurface2),
         border   = BorderStroke(1.dp, SuperBorder)
     ) {
-        Row(
-            modifier          = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Product photo with supermarket logo badge
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             ProductImage(
                 imageUrl     = product.imageUrl,
                 supermarket  = product.supermarket,
-                size         = 52.dp,
-                cornerRadius = 10.dp,
-                badgeSize    = 18.dp
+                size         = 56.dp,
+                cornerRadius = 10.dp
             )
-
             Spacer(Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
+            Column(Modifier.weight(1f)) {
                 Text(product.name, fontWeight = FontWeight.SemiBold, color = SuperTextPrimary)
-                Spacer(Modifier.height(3.dp))
-                // Supermarket badge
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = supermarketColor(product.supermarket).copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        product.supermarket,
-                        modifier   = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        fontSize   = 11.sp,
-                        color      = supermarketColor(product.supermarket),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                Text("€${"%.2f".format(product.price)}",
+                Text(product.supermarket, fontSize = 11.sp, color = SuperTextSecond)
+                Text(
+                    "€${"%.2f".format(product.price)}",
                     fontWeight = FontWeight.ExtraBold,
                     color      = SuperGreen,
-                    fontSize   = 17.sp)
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Favorite, contentDescription = null,
-                        tint = SuperRed, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    IconButton(
-                        onClick  = onRemove,
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Remove",
-                            tint     = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(18.dp))
-                    }
+                    fontSize   = 15.sp
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                IconButton(onClick = onMap, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.LocationOn, null, tint = SuperGreen, modifier = Modifier.size(20.dp))
+                }
+                IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.Delete, null, tint = Color.Red.copy(0.7f), modifier = Modifier.size(20.dp))
                 }
             }
         }

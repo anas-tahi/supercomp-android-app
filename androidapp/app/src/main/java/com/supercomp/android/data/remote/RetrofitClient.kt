@@ -1,24 +1,17 @@
 package com.supercomp.android.data.remote
 
-import android.content.Context
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    // Change to your server IP when testing on a real device:
-    // Emulator: http://10.0.2.2:5000/
-    // Real device: http://<your-local-ip>:5000/
     private const val BASE_URL = "http://10.0.2.2:5000/"
+    // private const val BASE_URL = "http://192.168.10.101:5000/"
 
-    private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
-    }
-
-    // Token holder — set after login
     var authToken: String? = null
 
     private val authInterceptor = Interceptor { chain ->
@@ -28,9 +21,16 @@ object RetrofitClient {
         chain.proceed(request)
     }
 
+    private val loggingInterceptor = HttpLoggingInterceptor().apply {
+        level = HttpLoggingInterceptor.Level.BODY
+    }
+
     private val client = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
         .addInterceptor(loggingInterceptor)
+        .connectTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(20, TimeUnit.SECONDS)
         .build()
 
     val api: ApiService by lazy {

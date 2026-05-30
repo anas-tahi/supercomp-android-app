@@ -6,10 +6,10 @@ const router = express.Router();
 // GET all products
 router.get("/", async (req, res) => {
   try {
-    const products = await Product.find();
+    const products = await Product.find({});
     res.json(products);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 });
 
@@ -19,11 +19,11 @@ router.get("/supermarket/:name", async (req, res) => {
     const products = await Product.find({ supermarket: req.params.name });
     res.json(products);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 });
 
-// GET products by search name (for compare)
+// GET products by search name
 router.get("/search", async (req, res) => {
   try {
     const { name } = req.query;
@@ -31,15 +31,15 @@ router.get("/search", async (req, res) => {
     const products = await Product.find({ name: { $regex: name, $options: "i" } });
     res.json(products);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 });
 
-// POST create product (admin use / seed)
+// POST -create product
 router.post("/", async (req, res) => {
   try {
-    const { name, supermarket, price, category, imageUrl } = req.body;
-    const product = await Product.create({ name, supermarket, price, category, imageUrl });
+    const { name, supermarket, price, category } = req.body;
+    const product = await Product.create({ name, supermarket, price, category, source: "legacy" });
     res.status(201).json(product);
   } catch (err) {
     res.status(400).json({ error: err.message });

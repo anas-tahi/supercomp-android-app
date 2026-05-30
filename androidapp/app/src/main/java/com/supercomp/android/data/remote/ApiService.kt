@@ -1,6 +1,7 @@
 package com.supercomp.android.data.remote
 
 import com.supercomp.android.data.model.*
+import org.w3c.dom.Comment
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -21,6 +22,9 @@ interface ApiService {
         @Path("userId") userId: String,
         @Body request: UpdateProfileRequest
     ): Response<BasicResponse>
+
+    @DELETE("/auth/account/{userId}")
+    suspend fun deleteAccount(@Path("userId") userId: String): Response<BasicResponse>
 
     // PRODUCTS
     @GET("/products")
@@ -49,7 +53,7 @@ interface ApiService {
     @DELETE("/shoppinglists/{id}")
     suspend fun deleteShoppingList(@Path("id") id: String): Response<BasicResponse>
 
-    // WISHLIST
+    // WISHLIST-FAVORITES
     @GET("/wishlist/user/{userId}")
     suspend fun getWishlistByUser(@Path("userId") userId: String): Response<List<Wishlist>>
 

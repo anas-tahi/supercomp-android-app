@@ -4,20 +4,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// ── Brand Colors ──────────────────────────────────────────────────────────────
-val SuperGreen       = Color(0xFF00E676)   // vibrant green accent
+val SuperGreen       = Color(0xFF00E676)
 val SuperGreenDark   = Color(0xFF00C853)
-val SuperNavy        = Color(0xFF0A0E1A)   // deep navy background
-val SuperSurface     = Color(0xFF121828)   // card surface
-val SuperSurface2    = Color(0xFF1C2436)   // elevated card
-val SuperBorder      = Color(0xFF2A3447)   // subtle border
-val SuperTextPrimary = Color(0xFFF0F4FF)   // near white
-val SuperTextSecond  = Color(0xFF8A99B8)   // muted blue-grey
+val SuperNavy        = Color(0xFF0A0E1A)
+val SuperSurface     = Color(0xFF121828)
+val SuperSurface2    = Color(0xFF1C2436)
+val SuperBorder      = Color(0xFF2A3447)
+val SuperTextPrimary = Color(0xFFF0F4FF)
+val SuperTextSecond  = Color(0xFF8A99B8)
 val SuperRed         = Color(0xFFFF5252)
 val SuperOrange      = Color(0xFFFF6D00)
 val SuperYellow      = Color(0xFFFFD740)
 
-// Supermarket brand colors
+// Supermarket colors
 val MercadonaGreen   = Color(0xFF00A650)
 val LidlBlue         = Color(0xFF0050AA)
 val DiaRed           = Color(0xFFDD1122)

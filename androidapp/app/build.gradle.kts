@@ -13,12 +13,14 @@ android {
         minSdk = 24
         targetSdk = 35
         versionCode = 2
-        versionName = "2.0"
+        versionName = "3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        manifestPlaceholders["MAPS_API_KEY"] = "AIzaSyD3YYvzlgr4Ir5MV8JxWe9xdV7p-qZPmzQ"
     }
 
     buildTypes {
@@ -82,11 +84,15 @@ dependencies {
     // Material Icons Extended
     implementation("androidx.compose.material:material-icons-extended")
 
-    //
-    implementation("io.coil-kt:coil-compose:2.6.0")
-
     // Coil
     implementation(libs.coil.compose)
+
+    // Google Maps
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.location)
+
+    // Google Places ← NEW
+    implementation("com.google.android.libraries.places:places:3.5.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

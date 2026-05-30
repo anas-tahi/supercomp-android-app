@@ -30,9 +30,6 @@ fun supermarketLogoRes(supermarket: String): Int? = when (supermarket) {
     else        -> null
 }
 
-/**
- * Standalone supermarket logo chip — used in the home chips row and as a fallback.
- */
 @Composable
 fun SupermarketLogo(
     supermarket: String,
@@ -55,10 +52,8 @@ fun SupermarketLogo(
             Image(
                 painter            = painterResource(id = logoRes),
                 contentDescription = supermarket,
-                contentScale       = ContentScale.Crop,
-                modifier           = Modifier
-                    .fillMaxSize()
-                    .padding(6.dp)
+                contentScale       = ContentScale.Crop, // Full fill
+                modifier           = Modifier.fillMaxSize()
             )
         } else {
             Box(
@@ -72,10 +67,6 @@ fun SupermarketLogo(
     }
 }
 
-/**
- * Product card image: shows the product photo from imageUrl.
- * In the bottom-right corner a small supermarket logo badge is overlaid.
- */
 @Composable
 fun ProductImage(
     imageUrl: String,
@@ -89,7 +80,6 @@ fun ProductImage(
     val logoRes = supermarketLogoRes(supermarket)
 
     Box(modifier = Modifier.size(size)) {
-        // ── Main product photo ────────────────────────────────────────────────
         if (imageUrl.isNotBlank()) {
             SubcomposeAsyncImage(
                 model              = imageUrl,
@@ -108,7 +98,6 @@ fun ProductImage(
                     }
                 },
                 error = {
-                    // If photo fails, fall back to logo
                     Box(
                         Modifier.fillMaxSize().clip(RoundedCornerShape(cornerRadius))
                             .background(Color.White),
@@ -116,8 +105,8 @@ fun ProductImage(
                     ) {
                         if (logoRes != null) {
                             Image(painterResource(logoRes), supermarket,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize().padding(6.dp))
+                                contentScale = ContentScale.Crop, // Full fill the box
+                                modifier = Modifier.fillMaxSize())
                         } else {
                             Text(supermarket.take(1), color = color,
                                 fontSize = fallbackFontSize, fontWeight = FontWeight.ExtraBold)
@@ -126,15 +115,14 @@ fun ProductImage(
                 }
             )
         } else {
-            // No URL — show supermarket logo full-size
             Box(
                 Modifier.fillMaxSize().clip(RoundedCornerShape(cornerRadius)).background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
                 if (logoRes != null) {
                     Image(painterResource(logoRes), supermarket,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().padding(6.dp))
+                        contentScale = ContentScale.Crop, // Full fill the box
+                        modifier = Modifier.fillMaxSize())
                 } else {
                     Box(Modifier.fillMaxSize().background(color.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center) {
@@ -145,7 +133,6 @@ fun ProductImage(
             }
         }
 
-        // ── Supermarket logo badge (bottom-right corner) ──────────────────────
         if (imageUrl.isNotBlank() && logoRes != null) {
             Box(
                 modifier = Modifier
@@ -158,7 +145,7 @@ fun ProductImage(
                 Image(
                     painter            = painterResource(logoRes),
                     contentDescription = null,
-                    contentScale       = ContentScale.Crop,
+                    contentScale       = ContentScale.Fit,
                     modifier           = Modifier
                         .fillMaxSize()
                         .padding(2.dp)

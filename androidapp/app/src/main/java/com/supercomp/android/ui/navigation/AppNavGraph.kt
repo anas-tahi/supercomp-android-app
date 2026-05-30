@@ -11,6 +11,7 @@ import com.supercomp.android.ui.auth.register.RegisterScreen
 import com.supercomp.android.ui.screens.compare.CompareScreen
 import com.supercomp.android.ui.screens.favorites.FavoritesScreen
 import com.supercomp.android.ui.screens.home.HomeScreen
+import com.supercomp.android.ui.screens.map.MapScreen
 import com.supercomp.android.ui.screens.profile.ProfileScreen
 import com.supercomp.android.ui.screens.shoppinglist.ShoppingListScreen
 
@@ -32,7 +33,11 @@ fun AppNavGraph(navController: NavHostController) {
 
         composable("register") {
             RegisterScreen(
-                onRegisterSuccess = { navController.navigate("login") { popUpTo("register") { inclusive = true } } },
+                onRegisterSuccess = {
+                    navController.navigate("login") {
+                        popUpTo("register") { inclusive = true }
+                    }
+                },
                 onGoToLogin = { navController.popBackStack() }
             )
         }
@@ -44,7 +49,11 @@ fun AppNavGraph(navController: NavHostController) {
                 navArgument("userId")   { type = NavType.StringType }
             )
         ) { back ->
-            HomeScreen(navController, back.arguments?.getString("username") ?: "", back.arguments?.getString("userId") ?: "")
+            HomeScreen(
+                navController = navController,
+                username = back.arguments?.getString("username") ?: "",
+                userId   = back.arguments?.getString("userId")   ?: ""
+            )
         }
 
         composable(
@@ -54,7 +63,11 @@ fun AppNavGraph(navController: NavHostController) {
                 navArgument("userId")   { type = NavType.StringType }
             )
         ) { back ->
-            CompareScreen(navController, back.arguments?.getString("username") ?: "", back.arguments?.getString("userId") ?: "")
+            CompareScreen(
+                navController = navController,
+                username = back.arguments?.getString("username") ?: "",
+                userId   = back.arguments?.getString("userId")   ?: ""
+            )
         }
 
         composable(
@@ -64,7 +77,11 @@ fun AppNavGraph(navController: NavHostController) {
                 navArgument("userId")   { type = NavType.StringType }
             )
         ) { back ->
-            FavoritesScreen(navController, back.arguments?.getString("username") ?: "", back.arguments?.getString("userId") ?: "")
+            FavoritesScreen(
+                navController = navController,
+                username = back.arguments?.getString("username") ?: "",
+                userId   = back.arguments?.getString("userId")   ?: ""
+            )
         }
 
         composable(
@@ -74,7 +91,11 @@ fun AppNavGraph(navController: NavHostController) {
                 navArgument("userId")   { type = NavType.StringType }
             )
         ) { back ->
-            ShoppingListScreen(navController, back.arguments?.getString("username") ?: "", back.arguments?.getString("userId") ?: "")
+            ShoppingListScreen(
+                navController = navController,
+                username = back.arguments?.getString("username") ?: "",
+                userId   = back.arguments?.getString("userId")   ?: ""
+            )
         }
 
         composable(
@@ -84,7 +105,29 @@ fun AppNavGraph(navController: NavHostController) {
                 navArgument("userId")   { type = NavType.StringType }
             )
         ) { back ->
-            ProfileScreen(navController, back.arguments?.getString("username") ?: "", back.arguments?.getString("userId") ?: "")
+            ProfileScreen(
+                navController = navController,
+                username = back.arguments?.getString("username") ?: "",
+                userId   = back.arguments?.getString("userId")   ?: "",
+                onBackToLogin = {
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // Navigate to teh MAP SCREEN from other screens  : Compare, Favorites, ShoppingList .
+        composable(
+            route = "map/{brand}",
+            arguments = listOf(
+                navArgument("brand") { type = NavType.StringType }
+            )
+        ) { back ->
+            MapScreen(
+                navController      = navController,
+                supermarketBrand   = back.arguments?.getString("brand") ?: ""
+            )
         }
     }
 }
