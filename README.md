@@ -1,107 +1,63 @@
 # SuperComp 🛒
 
-**SuperComp** is an Android app that helps users compare grocery prices across Spain's top supermarkets — Mercadona, Lidl, Carrefour, and Alcampo — in real time.
+> Compare grocery prices across **Mercadona, Lidl, Carrefour and Alcampo** in real time — all in one Android app.
+
+<div align="center">
+
+![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-0095D5?style=for-the-badge&logo=kotlin&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack_Compose-4285F4?style=for-the-badge&logo=jetpack-compose&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
+
+</div>
 
 ---
 
 ## 📱 Features
 
-- **Price Comparison** — Search any product and instantly compare prices across all 4 supermarkets
-- **Shopping List** — Build a cart and see the total cost per supermarket, sorted cheapest to most expensive
-- **Favourites** — Save products to a personal wishlist with one tap
-- **Nearby Map** — Find the nearest supermarket branches using Google Maps
-- **Community Feed** — Read and post comments on the Home screen
-- **Profile Management** — Edit username, password, phone, city and profile photo
-- **Voice Search** — Search products by voice using Android's speech recognition
-- **JWT Authentication** — Secure login and registration with persistent session via DataStore
+- 🔍 Search any product and instantly compare prices across 4 supermarkets
+- 📍 Google Maps integration — find the nearest store with the best price
+- 🔐 JWT authentication (register/login)
+- 💾 Persistent preferences with DataStore
+- 🧱 Clean MVVM architecture
 
----
+## 🏗️ Architecture
 
-## 🛠 Tech Stack
+```
+Frontend (Android)          Backend (Node.js)
+─────────────────           ─────────────────
+Jetpack Compose UI    ───▶  Express REST API
+ViewModel + LiveData        JWT Auth
+Retrofit HTTP client  ◀───  MongoDB Atlas
+DataStore (prefs)           Product scraper
+Google Maps SDK
+```
+
+## 🛠️ Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Android | Kotlin, Jetpack Compose, MVVM |
-| Navigation | Jetpack Navigation Compose |
-| Networking | Retrofit 2, OkHttp, Gson |
-| Local Storage | Jetpack DataStore (Preferences) |
-| Images | Coil |
-| Maps | Google Maps SDK for Android |
-| Backend | Node.js, Express.js |
+|---|---|
+| UI | Kotlin + Jetpack Compose |
+| Architecture | MVVM |
+| Networking | Retrofit + OkHttp |
+| Auth | JWT |
+| Storage | DataStore |
+| Maps | Google Maps SDK |
+| Backend | Node.js + Express |
 | Database | MongoDB Atlas |
-| Auth | JWT (JSON Web Token) |
 
----
+## 🚀 Run Locally
 
-## 🏗 Architecture
+```bash
+# Backend
+cd backend
+npm install
+npm start
 
-The app follows **MVVM (Model-View-ViewModel)** architecture with a clean separation of layers:
-
+# Android — open in Android Studio and run
 ```
-UI Layer       →  Composable screens + BottomBar
-ViewModel      →  State management, business logic
-Data Layer     →  RetrofitClient (remote) + DataStore (local)
-```
-
-Package structure:
-```
-com.supercomp.android/
-├── data/
-│   ├── local/       UserPrefs.kt (DataStore)
-│   ├── model/       Models.kt (data classes)
-│   └── remote/      ApiService.kt, RetrofitClient.kt
-├── ui/
-│   ├── auth/        login/, register/
-│   ├── components/  BottomBar, MapUtils, VoiceRecognizer
-│   ├── navigation/  AppNavGraph.kt
-│   └── screens/     home/, compare/, favorites/, shoppinglist/, map/, profile/
-└── MainActivity.kt
-```
-
----
-
-## 🚀 Getting Started
-
-### Android App
-
-1. Clone this repo
-2. Open `androidapp/` in Android Studio
-3. Create `androidapp/local.properties` with your SDK path:
-   ```
-   sdk.dir=/path/to/your/Android/Sdk
-   ```
-4. Add your Google Maps API key in `AndroidManifest.xml`
-5. Update `BASE_URL` in `RetrofitClient.kt` to point to your backend
-6. Run on a device or emulator (API 24+)
-
-### Backend
-
-1. Go to `supercomp-backend/`
-2. Copy `.env.example` to `.env` and fill in your values:
-   ```
-   MONGO_URI=your_mongodb_connection_string
-   PORT=5000
-   JWT_SECRET=your_secret
-   ```
-3. Install dependencies and run:
-   ```bash
-   npm install
-   node server.js
-   ```
-
----
-
-## 📂 Repository Structure
-
-```
-supercomp-android-app/
-├── androidapp/          Android Kotlin project
-├── supercomp-backend/   Node.js + Express API
-└── docs/                Course deliverables (Entregable 1 & 2)
-```
-
----
 
 ## 👨‍💻 Author
 
-**Anas Tahir** — Android Development Course, 2025–2026
+**Anas Tahir** — [github.com/anas-tahi](https://github.com/anas-tahi)
